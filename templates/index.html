@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการสต็อกสินค้า</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --rarity-SSS: #ff0000;
+            --rarity-SS-plus: #ff4500;
+            --rarity-SS: #ffa500;
+            --rarity-S: #ffd700;
+            --rarity-A: #c0c0c0;
+            --rarity-B: #cd7f32;
+        }
+        .item-card { transition: all 0.3s ease; border: none; overflow: hidden; position: relative; }
+        .item-card.out-of-stock { opacity: 0.6; filter: grayscale(0.8); }
+        .item-card:hover:not(.out-of-stock) { transform: translateY(-8px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; }
+        
+        .item-img-container { height: 240px; position: relative; overflow: hidden; background: #eee; }
+        .item-img-container img { height: 100%; width: 100%; object-fit: cover; }
+        
+        .image-counter {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.6); color: white;
+            padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; z-index: 3;
+        }
+
+        .stock-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1.5rem; z-index: 2;
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+
+        .badge-sss { background-color: var(--rarity-SSS); color: white; box-shadow: 0 0 10px rgba(255,0,0,0.5); }
+        .badge-s { background-color: var(--rarity-S); color: black; }
+        .badge-male { background-color: #0d6efd; }
+        .badge-female { background-color: #d63384; }
+        .badge-unisex { background-color: #6f42c1; }
+
+        /* Fullscreen Modal Image Style */
+        .modal-content.gallery-content { background: transparent; border: none; }
+        .modal-body.gallery-body { padding: 0; position: relative; }
+        .gallery-img { max-height: 85vh; width: auto; max-width: 100%; border-radius: 4px; }
+        .carousel-control-prev, .carousel-control-next { width: 10%; filter: invert(1); }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <i class="bi bi-shield-shaded me-2"></i> Stock Inventory
+            </a>
+            <a href="/add" class="btn btn-success"><i class="bi bi-plus-lg"></i> เพิ่มไอเทม</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            {% for item in items %}
+            <div class="col-md-4 col-sm-6 mb-4">
+                <div class="card h-100 shadow-sm item-card {% if not item.is_active %}out-of-stock{% endif %}">
+                    
+                    <div class="item-img-container" 
+                         {% if item.is_active %}data-bs-toggle="modal" data-bs-target="#galleryModal{{item.id}}" style="cursor: pointer;"{% endif %}>
+                        
+                        <!-- แสดงจำนวนรูป -->
+                        <div class="image-counter">
+                            <i class="bi bi-images"></i> 1 / {{item.image_list|length}}
+                        </div>
+
+                        {% if not item.is_active %}
+                        <div class="stock-overlay"><span>OUT OF STOCK</span></div>
+                        {% endif %}
+
+                        {% if item.image_list %}
+                            <img src="/static/uploads/{{item.image_list[0]}}" alt="{{item.name}}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/400x300?text=No+Image" alt="ไม่มีรูป">
+                        {% endif %}
+                    </div>
+
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title text-truncate">{{item.name}}</h5>
+                            <span class="badge 
+                                {% if item.rarity == 'SSS' %}badge-sss
+                                {% elif item.rarity == 'S' %}badge-s
+                                {% else %}bg-secondary{% endif %}">
+                                {{item.rarity}}
+                            </span>
+                        </div>
+
+                        <div class="mb-3">
+                            <span class="badge rounded-pill 
+                                {% if item.gender == 'ชาย' %}badge-male
+                                {% elif item.gender == 'หญิง' %}badge-female
+                                {% else %}badge-unisex{% endif %}">
+                                {{item.gender}}
+                            </span>
+                            <span class="badge bg-light text-dark border">{{item.category}}</span>
+                            <span class="badge bg-dark-subtle text-dark">{{item.duration}}</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="text-primary mb-0">{{ "{:,}".format(item.price) }} <small class="fs-6 text-muted">บาท</small></h4>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-top-0 d-flex gap-1">
+                        <button class="btn btn-outline-primary btn-sm flex-grow-1" 
+                                {% if not item.is_active %}disabled{% else %}data-bs-toggle="modal" data-bs-target="#galleryModal{{item.id}}"{% endif %}>
+                            <i class="bi bi-zoom-in"></i> ดูรูปภาพ
+                        </button>
+                        <a href="/edit/{{item.id}}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
+                        <form action="/delete/{{item.id}}" method="post" onsubmit="return confirm('ลบใช่หรือไม่?')">
+                            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Gallery (เฉพาะรูป) -->
+            {% if item.is_active %}
+            <div class="modal fade gallery-modal" id="galleryModal{{item.id}}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-centered">
+                    <div class="modal-content gallery-content">
+                        <div class="modal-header border-0 p-2">
+                            <h5 class="text-white m-0 ms-2">{{item.name}}</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body gallery-body text-center">
+                            <div id="carousel{{item.id}}" class="carousel slide" data-bs-ride="false">
+                                <div class="carousel-inner">
+                                    {% for img in item.image_list %}
+                                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                                        <img src="/static/uploads/{{img}}" class="gallery-img">
+                                        <div class="text-white mt-2 small">{{loop.index}} / {{item.image_list|length}}</div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if item.image_list|length > 1 %}
+                                <button class="carousel-control-prev" type="button" data-bs-target="#carousel{{item.id}}" data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#carousel{{item.id}}" data-bs-slide="next">
+                                    <span class="carousel-control-next-icon"></span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // รองรับการใช้คีย์บอร์ดเลื่อนรูปและปิด Modal
+        document.addEventListener('keydown', function(e) {
+            const activeModal = document.querySelector('.modal.show');
+            if (!activeModal) return;
+
+            const carousel = activeModal.querySelector('.carousel');
+            if (!carousel) return;
+            
+            const bootstrapCarousel = bootstrap.Carousel.getOrCreateInstance(carousel);
+
+            if (e.key === 'ArrowLeft') {
+                bootstrapCarousel.prev();
+            } else if (e.key === 'ArrowRight') {
+                bootstrapCarousel.next();
+            }
+        });
+    </script>
+</body>
+</html>

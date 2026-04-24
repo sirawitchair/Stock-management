@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แก้ไขสินค้า - Stock System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow border-0">
+                    <div class="card-header bg-warning py-3">
+                        <h4 class="mb-0"><i class="bi bi-pencil-square me-2"></i>แก้ไขไอเทม: {{ item.name }}</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <form action="/edit/{{ item.id }}" method="post" enctype="multipart/form-data">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-bold">ชื่อสินค้า</label>
+                                    <input type="text" name="name" class="form-control" value="{{ item.name }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">ราคา (บาท)</label>
+                                    <input type="number" name="price" class="form-control" value="{{ item.price }}" required>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">เพศ</label>
+                                    <select name="gender" class="form-select">
+                                        <option value="ชาย" {% if item.gender == 'ชาย' %}selected{% endif %}>ชาย</option>
+                                        <option value="หญิง" {% if item.gender == 'หญิง' %}selected{% endif %}>หญิง</option>
+                                        <option value="ทุกเพศ" {% if item.gender == 'ทุกเพศ' %}selected{% endif %}>ทุกเพศ</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">หมวดหมู่</label>
+                                    <select name="category" class="form-select">
+                                        <option value="คอ" {% if item.category == 'คอ' %}selected{% endif %}>คอ</option>
+                                        <option value="ใบหน้า" {% if item.category == 'ใบหน้า' %}selected{% endif %}>ใบหน้า</option>
+                                        <option value="ผม" {% if item.category == 'ผม' %}selected{% endif %}>ผม</option>
+                                        <option value="หมวก" {% if item.category == 'หมวก' %}selected{% endif %}>หมวก</option>
+                                        <option value="หลัง" {% if item.category == 'หลัง' %}selected{% endif %}>หลัง</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">ระยะเวลา</label>
+                                    <select name="duration" class="form-select">
+                                        <option value="ถาวร" {% if item.duration == 'ถาวร' %}selected{% endif %}>ถาวร</option>
+                                        <option value="30 วัน" {% if item.duration == '30 วัน' %}selected{% endif %}>30 วัน</option>
+                                        <option value="7 วัน" {% if item.duration == '7 วัน' %}selected{% endif %}>7 วัน</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">ระดับ (Rarity)</label>
+                                    <select name="rarity" class="form-select">
+                                        {% for r in ['SSS', 'SS+', 'SS', 'S', 'A', 'B'] %}
+                                        <option value="{{ r }}" {% if item.rarity == r %}selected{% endif %}>{{ r }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">สถานะสต็อก</label>
+                                    <select name="is_active" class="form-select border-primary">
+                                        <option value="True" {% if item.is_active %}selected{% endif %}>พร้อมจำหน่าย</option>
+                                        <option value="False" {% if not item.is_active %}selected{% endif %}>หมด (Out of Stock)</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold">เปลี่ยนรูปภาพ (ปล่อยว่างไว้ถ้าไม่ต้องการเปลี่ยน)</label>
+                                    <input type="file" id="fileInput" name="files" class="form-control" multiple accept="image/*">
+                                    <div id="previewContainer" class="d-flex gap-2 mt-2">
+                                        {% if item.images %}
+                                            {% for img in item.images.split(',') %}
+                                            <img src="/static/uploads/{{ img }}" class="rounded border" style="width:80px; height:80px; object-fit:cover;">
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="col-12 mt-4 pt-3 border-top d-flex justify-content-end">
+                                    <a href="/" class="btn btn-light me-2">ยกเลิก</a>
+                                    <button type="submit" class="btn btn-warning px-5 shadow-sm fw-bold">
+                                        <i class="bi bi-check-circle me-2"></i>อัปเดตข้อมูล
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = '';
+            const files = e.target.files;
+            for (let i = 0; i < Math.min(files.length, 3); i++) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.style.width = '80px';
+                    img.style.height = '80px';
+                    img.style.objectFit = 'cover';
+                    img.classList.add('rounded', 'border');
+                    container.appendChild(img);
+                }
+                reader.readAsDataURL(files[i]);
+            }
+        });
+    </script>
+</body>
+</html>
